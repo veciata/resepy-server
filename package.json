@@ -1,6 +1,6 @@
 {
   "name": "tsresepy-server",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "TS Recipe API — Express + MariaDB",
   "main": "src/index.js",
   "type": "module",
