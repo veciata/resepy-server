@@ -1,0 +1,16 @@
+# Replace example.com with your domain. Point DNS A record to this server.
+
+example.com {
+	encode gzip
+
+	@api path /api/* /health
+	handle @api {
+		reverse_proxy 127.0.0.1:3001
+	}
+
+	handle {
+		respond "TS Recipe API — use the mobile app" 200
+	}
+}
+
+# Automatic HTTPS via Let's Encrypt is enabled by default when using a real domain.
