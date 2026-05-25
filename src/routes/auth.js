@@ -17,6 +17,13 @@ import {
   isRefreshTokenValid,
   toPublicUser,
 } from '../services/userService.js';
+import {
+  verifyGoogleIdToken,
+  verifyFacebookAccessToken,
+  findOrCreateSocialUser,
+  loginVeciataAccount,
+  registerVeciataAccount,
+} from '../services/socialAuthService.js';
 
 const router = Router();
 
@@ -102,6 +109,53 @@ router.get(
     const user = await findUserById(req.user.id);
     if (!user) throw new AppError('User not found', 404);
     res.json(toPublicUser(user));
+  }),
+);
+
+router.post(
+  '/google',
+  asyncHandler(async (req, res) => {
+    const { id_token: idToken } = req.body;
+    if (!idToken) throw new AppError('id_token is required', 400);
+    const profile = await verifyGoogleIdToken(idToken);
+    const user = await findOrCreateSocialUser(profile);
+    const tokens = await issueTokens(user);
+    res.json({ ...tokens, user: toPublicUser(user) });
+  }),
+);
+
+router.post(
+  '/facebook',
+  asyncHandler(async (req, res) => {
+    const { access_token: accessToken } = req.body;
+    if (!accessToken) throw new AppError('access_token is required', 400);
+    const profile = await verifyFacebookAccessToken(accessToken);
+    const user = await findOrCreateSocialUser(profile);
+    const tokens = await issueTokens(user);
+    res.json({ ...tokens, user: toPublicUser(user) });
+  }),
+);
+
+router.post(
+  '/veciata/login',
+  asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+    const user = await loginVeciataAccount(email, password);
+    const tokens = await issueTokens(user);
+    res.json({ ...tokens, user: toPublicUser(user) });
+  }),
+);
+
+router.post(
+  '/veciata/register',
+  asyncHandler(async (req, res) => {
+    const { username, email, password } = req.body;
+    if (!username || !email || !password) {
+      throw new AppError('username, email and password are required', 400);
+    }
+    const user = await registerVeciataAccount({ username, email, password });
+    const tokens = await issueTokens(user);
+    res.status(201).json({ ...tokens, user: toPublicUser(user) });
   }),
 );
 

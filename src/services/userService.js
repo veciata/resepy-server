@@ -5,33 +5,107 @@ import { AppError } from '../middleware/error.js';
 
 export async function findUserByEmail(email) {
   const [rows] = await pool.query(
-    'SELECT id, username, email, password_hash, role FROM users WHERE email = :email',
-    { email },
+    `SELECT id, username, email, password_hash, role, auth_provider, provider_uid
+     FROM users WHERE email = :email`,
+    { email: email.toLowerCase() },
   );
   return rows[0] || null;
 }
 
 export async function findUserById(id) {
   const [rows] = await pool.query(
-    'SELECT id, username, email, role FROM users WHERE id = :id',
+    'SELECT id, username, email, role, auth_provider FROM users WHERE id = :id',
     { id },
   );
   return rows[0] || null;
 }
 
+export async function findUserByProvider(provider, providerUid) {
+  const [rows] = await pool.query(
+    `SELECT id, username, email, role, auth_provider FROM users
+     WHERE auth_provider = :provider AND provider_uid = :providerUid`,
+    { provider, providerUid },
+  );
+  return rows[0] || null;
+}
+
+async function uniqueUsername(base) {
+  const safe = (base || 'user').replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 40) || 'user';
+  let candidate = safe;
+  let n = 0;
+  while (true) {
+    const [rows] = await pool.query(
+      'SELECT id FROM users WHERE username = :username',
+      { username: candidate },
+    );
+    if (!rows.length) return candidate;
+    n += 1;
+    candidate = `${safe}_${n}`;
+  }
+}
+
 export async function createUser({ username, email, password, role = 'user' }) {
-  const existing = await findUserByEmail(email);
+  const normalizedEmail = email.toLowerCase();
+  const existing = await findUserByEmail(normalizedEmail);
   if (existing) throw new AppError('Email already registered', 400);
+  const [existingUsername] = await pool.query(
+    'SELECT id FROM users WHERE username = :username',
+    { username },
+  );
+  if (existingUsername.length > 0) {
+    throw new AppError('Username already taken', 400);
+  }
 
   const passwordHash = await bcrypt.hash(password, 12);
   const [result] = await pool.query(
-    'INSERT INTO users (username, email, password_hash, role) VALUES (:username, :email, :passwordHash, :role)',
+    `INSERT INTO users (username, email, password_hash, auth_provider, role)
+     VALUES (:username, :email, :passwordHash, 'local', :role)`,
+    { username, email: normalizedEmail, passwordHash, role },
+  );
+  return findUserById(result.insertId);
+}
+
+export async function createVeciataUser({ username, email, password, role = 'user' }) {
+  const existing = await findUserByEmail(email);
+  if (existing) throw new AppError('Email already registered', 400);
+  const [existingUsername] = await pool.query(
+    'SELECT id FROM users WHERE username = :username',
+    { username },
+  );
+  if (existingUsername.length > 0) {
+    throw new AppError('Username already taken', 400);
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const [result] = await pool.query(
+    `INSERT INTO users (username, email, password_hash, auth_provider, role)
+     VALUES (:username, :email, :passwordHash, 'veciata', :role)`,
     { username, email, passwordHash, role },
   );
   return findUserById(result.insertId);
 }
 
+export async function createOAuthUser({ provider, providerUid, email, username }) {
+  const normalizedEmail = email.toLowerCase();
+  const existing = await findUserByEmail(normalizedEmail);
+  if (existing) throw new AppError('Email already registered with another method', 400);
+
+  const name = await uniqueUsername(username);
+  const [result] = await pool.query(
+    `INSERT INTO users (username, email, password_hash, auth_provider, provider_uid, role)
+     VALUES (:username, :email, NULL, :provider, :providerUid, 'user')`,
+    {
+      username: name,
+      email: normalizedEmail,
+      provider,
+      providerUid,
+    },
+  );
+  return findUserById(result.insertId);
+}
+
 export async function verifyPassword(user, password) {
+  if (!user.password_hash) return false;
   return bcrypt.compare(password, user.password_hash);
 }
 
@@ -71,5 +145,6 @@ export function toPublicUser(user) {
     email: user.email,
     name: user.username,
     role: user.role,
+    authProvider: user.auth_provider,
   };
 }

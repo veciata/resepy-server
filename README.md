@@ -14,6 +14,8 @@ npm run db:init
 npm run dev
 ```
 
+On startup the API applies any pending OAuth schema changes automatically. For manual runs only: `npm run db:migrate-oauth`.
+
 ### Database access troubleshooting
 
 If you see `Access denied for user 'tsresepy_user'@'192.168.1.x'`:
@@ -74,3 +76,26 @@ Copy `Caddyfile.example` to `/etc/caddy/Caddyfile` (or include it) and reload Ca
 ## Default admin
 
 Created on first `db:init` if no users exist (see `.env.example`).
+
+## Social login (Google, Facebook, Veciata)
+
+1. Restart the API (or run `npm run db:migrate-oauth`) so existing databases get `auth_provider` / `provider_uid` columns.
+
+2. Set in `server/.env`:
+
+```env
+GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+FACEBOOK_APP_ID=...
+FACEBOOK_APP_SECRET=...
+```
+
+3. Set matching values in the Flutter `.env` (`GOOGLE_CLIENT_ID`, `FACEBOOK_APP_ID`).
+
+4. Android: update `android/app/src/main/res/values/strings.xml` with your Facebook App ID and client token.
+
+API endpoints:
+
+- `POST /api/auth/google` — body `{ "id_token": "..." }`
+- `POST /api/auth/facebook` — body `{ "access_token": "..." }`
+- `POST /api/auth/veciata/login` — `@veciata.info` email + password
+- `POST /api/auth/veciata/register` — register with `@veciata.info` email

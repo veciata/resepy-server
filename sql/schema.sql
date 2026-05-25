@@ -6,9 +6,12 @@ CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(64) NOT NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NULL,
+  auth_provider ENUM('local', 'google', 'facebook', 'veciata') NOT NULL DEFAULT 'local',
+  provider_uid VARCHAR(255) NULL,
   role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_users_provider (auth_provider, provider_uid)
 );
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
