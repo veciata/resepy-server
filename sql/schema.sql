@@ -27,10 +27,6 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE TABLE IF NOT EXISTS recipes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  description TEXT,
-  ingredients TEXT,
-  instructions TEXT,
   image_url VARCHAR(512),
   category_id INT NULL,
   is_my_recipe TINYINT(1) NOT NULL DEFAULT 1,
@@ -38,6 +34,18 @@ CREATE TABLE IF NOT EXISTS recipes (
   likes INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FULLTEXT INDEX ft_recipes (title, description, ingredients, instructions)
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS recipe_texts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  recipe_id INT NOT NULL,
+  language CHAR(2) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  ingredients TEXT,
+  instructions TEXT,
+  FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_recipe_language (recipe_id, language),
+  FULLTEXT INDEX ft_recipe_texts (title, description, ingredients, instructions)
 );

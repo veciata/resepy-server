@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 
 import authRoutes from './routes/auth.js';
 import searchRoutes from './routes/search.js';
+import scrapeRoutes from './routes/scrape.js';
 import syncRoutes from './routes/sync.js';
 import adminRoutes from './routes/admin.js';
 import { errorMiddleware } from './middleware/error.js';
@@ -21,6 +22,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/scrape', scrapeRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/api/admin', adminRoutes);
 
